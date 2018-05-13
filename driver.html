@@ -1,0 +1,128 @@
+<html>
+<head>
+<script type="text/javascript" src="./automatron.js"></script>
+<script type="text/javascript" src="./vis/dist/vis.js"></script>
+</head>
+<body>
+<h3>Config</h3>
+<textarea id="conf_file" onchange="configAutomata()" rows=7>
+DFA
+q0
+B
+q1
+
+q0,q0,b
+q0,q1,a
+q1,q0,b
+q1,q2,a
+q2,q2,a
+q2,q2,b
+</textarea>
+<br>
+<h3>Test String</h3>
+<input onchange="resetAutomata()" id='string' type='text'/>
+<h3>Result</h3>
+<p id='result'></p>
+<p id='str_left'></p>
+<button onclick="advanceGraph()">Change</button>
+<div id="stateGraph" style="border:1px solid black"></div>
+<script>
+	let dfa;
+	let network;
+	let nodes;
+	let dfa_gen;
+	
+	function configAutomata(){
+		let conf_str = document.getElementById("conf_file").value;
+		let [automata_type, transitions, start_state, final_states] = parse_config(conf_str);
+		dfa = new DFA(transitions, start_state, final_states);
+		runAutomata();
+		startAutomata();
+		setupDFAGraph();
+	}
+	
+	function advanceGraph(){
+		let gen_out = dfa_gen.next();
+		if (gen_out.value !== undefined){
+			network.unselectAll();
+			network.selectNodes(gen_out.value);
+			document.getElementById('str_left').innerHTML = document.getElementById('str_left').innerHTML.substr(1);
+		}
+	}
+
+	function setupDFAGraph(){
+		
+		nodes = []
+		let edges = [] 	
+		for (let state_name in dfa.states){
+			let state = dfa.states[state_name];
+			let node_config = {id: state.name, label: state.name};
+			if (state_name === dfa.start_state.name){
+				node_config.borderWidth = 2;
+				node_config.shapeProperties = {borderDashes: [5,5]};
+			}
+			if (state.final){
+				node_config.borderWidth = 3;
+			}
+			nodes.push(node_config);
+			let trans = state.transitions;
+			let flipped_trans = {}
+			for (let trans_char in trans){
+				for (let i = 0; i < trans[trans_char].length; i++){
+					let to_state_name = trans[trans_char][i].name
+					if (flipped_trans[to_state_name] === undefined){
+						flipped_trans[to_state_name] = [];
+					}
+					flipped_trans[to_state_name].push(trans_char);
+				}
+			}
+			for (let to_state_name in flipped_trans){
+				edges.push({from:state.name, to:to_state_name, label:flipped_trans[to_state_name].join(","),
+				chosen:false});
+			}
+		}
+
+		let container = document.getElementById("stateGraph");
+		nodes = new vis.DataSet(nodes);
+		edges = new vis.DataSet(edges);
+		let data = {
+			nodes: nodes,
+			edges: edges
+		};
+		
+		let options = { 
+			edges: {
+				arrows: "to"
+			},
+			nodes: {
+				borderWidth:1,
+				borderWidthSelected:1,
+				color: {background: "#97c2fc", border: "#2b7ce9"}
+			}
+		};
+		
+		network = new vis.Network(container, data, options);
+		advanceGraph();
+	}
+
+	function startAutomata(){
+		let test_string = document.getElementById('string').value;
+		dfa_gen = process_string(dfa, test_string);
+		document.getElementById('str_left').innerHTML = " " + test_string;
+	}
+	
+	function resetAutomata(){
+		runAutomata();
+		startAutomata();
+		advanceGraph();
+	}
+	
+	function runAutomata(){
+		let test_string = document.getElementById('string').value;
+		let [success, trace] = trace_automata(dfa, test_string);
+		document.getElementById('result').innerHTML = success;
+	}
+	configAutomata();
+</script>
+</body>
+</html>
