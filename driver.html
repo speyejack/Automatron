@@ -31,6 +31,7 @@ q2,q2,b
 	let network;
 	let nodes;
 	let dfa_gen;
+	let current_states;
 	
 	function configAutomata(){
 		let conf_str = document.getElementById("conf_file").value;
@@ -44,10 +45,15 @@ q2,q2,b
 	function advanceGraph(){
 		let gen_out = dfa_gen.next();
 		if (gen_out.value !== undefined){
-			network.unselectAll();
-			network.selectNodes(gen_out.value);
+			current_states = gen_out.value;
+			selectNodes();
 			document.getElementById('str_left').innerHTML = document.getElementById('str_left').innerHTML.substr(1);
 		}
+	}
+	
+	function selectNodes(){
+		network.unselectAll();
+		network.selectNodes(current_states);
 	}
 
 	function setupDFAGraph(){
@@ -102,6 +108,8 @@ q2,q2,b
 		};
 		
 		network = new vis.Network(container, data, options);
+		network.on("deselectNode", selectNodes);
+		network.on("release", selectNodes);
 		advanceGraph();
 	}
 
