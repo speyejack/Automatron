@@ -1,9 +1,4 @@
 
-function Trace(state, string){
-	this.state = state;
-	this.string = string
-}
-
 function State(name, transitions, final_state){
 	this.name = name;
 	this.transitions = transitions;
@@ -61,23 +56,20 @@ function* process_string(dfa, string){
 	yield current_states.map(state=>state.name);
 }
 
-function advance_trace(current_state, string_left){
-	if (string_left === ""){
-		return [new Trace(current_state, string_left)];
-	}
-	let next_state = current_state.transitions[string_left.charAt(0)][0];
-	if (next_state === undefined){
-		return [new Trace(current_state, string_left)];
-	}
-	let trace_stack = advance_trace(next_state, string_left.substr(1));
-	trace_stack.push(new Trace(current_state, string_left));
-	return trace_stack;
-}
-
 function trace_automata(dfa, string){
-	let r_trace_stack = advance_trace(dfa.start_state, string);
-	let success = r_trace_stack[0].string === "" && r_trace_stack[0].state.final;
-	return [success, r_trace_stack.reverse()];
+	let gen = process_string(dfa, string);
+	let trace = [];
+	let cur_states;
+
+	do{
+		cur_states = gen.next().value;
+		trace.push(cur_states);
+	} while(cur_states);
+
+	trace.splice(-1,1);
+	let last_states = trace[trace.length-1];
+	let success = last_states.reduce((prev,last_state)=>prev && dfa.states[last_state].final, true);
+	return [success, trace];
 }
 
 function format_input(conf_str){
